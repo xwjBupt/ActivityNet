@@ -106,14 +106,17 @@ def download_clip(video_identifier, output_filename,
                '-loglevel', 'panic',
                '"%s"' % output_filename]
     command = ' '.join(command)
-    try:
-        output = subprocess.check_output(command, shell=True,
-                                         stderr=subprocess.STDOUT)
-    except subprocess.CalledProcessError as err:
-        return status, err.output
+#    try:
+#        output = subprocess.check_output(command, shell=True,
+#                                         stderr=subprocess.STDOUT)
+#    except subprocess.CalledProcessError as err:
+#        return status, err.output
 
     # Check if the video was successfully saved.
+
+    shutil.copy(tmp_filename,output_filename)
     status = os.path.exists(output_filename)
+    print (output_filename)
     os.remove(tmp_filename)
     return status, 'Downloaded'
 
@@ -123,14 +126,18 @@ def download_clip_wrapper(row, label_to_dir, trim_format, tmp_dir):
     output_filename = construct_video_filename(row, label_to_dir,
                                                trim_format)
     clip_id = os.path.basename(output_filename).split('.mp4')[0]
-    if os.path.exists(output_filename):
+    txt_filename = output_filename.replace('.mp4','.txt')
+
+    if os.path.exists(output_filename) or os.path.exists(txt_filename):
+        print ('DONE >> '+output_filename)
         status = tuple([clip_id, True, 'Exists'])
         return status
-
+    print ('Downloading >>'+output_filename)
     downloaded, log = download_clip(row['video-id'], output_filename,
                                     row['start-time'], row['end-time'],
                                     tmp_dir=tmp_dir)
     status = tuple([clip_id, downloaded, log])
+    print ('Downloaded >>'+output_filename)
     return status
 
 
@@ -163,7 +170,7 @@ def parse_kinetics_annotations(input_csv, ignore_is_cc=False):
 
 
 def main(input_csv, output_dir,
-         trim_format='%06d', num_jobs=24, tmp_dir='/tmp/kinetics',
+         trim_format='%06d', num_jobs=12, tmp_dir='/tmp/kinetics',
          drop_duplicates=False):
 
     # Reading and parsing Kinetics.
@@ -212,7 +219,7 @@ if __name__ == '__main__':
                    help=('This will be the format for the '
                          'filename of trimmed videos: '
                          'videoid_%0xd(start_time)_%0xd(end_time).mp4'))
-    p.add_argument('-n', '--num-jobs', type=int, default=24)
+    p.add_argument('-n', '--num-jobs', type=int, default=2)
     p.add_argument('-t', '--tmp-dir', type=str, default='/tmp/kinetics')
     p.add_argument('--drop-duplicates', type=str, default='non-existent',
                    help='Unavailable at the moment')
